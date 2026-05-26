@@ -1,0 +1,1891 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Madiba Map</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+
+  <style>
+    :root {
+      --bg: linear-gradient(180deg, #f7fbff 0%, #eef8ff 100%);
+      --card: #ffffff;
+      --text: #20242a;
+      --muted: #68707d;
+      --border: #d9e1e8;
+      --accent: #8b5e22;
+      --green: #2f6b4f;
+      --red: #9f3d32;
+      --blue: #35617c;
+      --gold: #b5812a;
+      --purple: #6f5b82;
+      --shadow: 0 12px 30px rgba(0,0,0,.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 18%, rgba(239, 28, 37, 0.12), transparent 18%),
+        radial-gradient(circle at 88% 14%, rgba(0, 114, 188, 0.14), transparent 20%),
+        radial-gradient(circle at 78% 76%, rgba(0, 155, 119, 0.12), transparent 18%),
+        radial-gradient(circle at 20% 82%, rgba(243, 112, 33, 0.12), transparent 20%),
+        radial-gradient(circle at 52% 92%, rgba(255, 210, 31, 0.12), transparent 18%),
+        linear-gradient(180deg, #f8fbff 0%, #eef8ff 100%);
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -2;
+      pointer-events: none;
+      opacity: .24;
+      filter: saturate(105%);
+    }
+
+    body::before {
+      width: 760px;
+      height: 420px;
+      top: 120px;
+      right: -210px;
+      background:
+        linear-gradient(135deg, #ef1c25 0 22%, transparent 22%),
+        linear-gradient(35deg, #ffd21f 0 43%, transparent 43%),
+        linear-gradient(120deg, #0072bc 0 61%, transparent 61%),
+        linear-gradient(230deg, #009b77 0 80%, transparent 80%),
+        #f37021;
+      clip-path: polygon(0 0, 100% 6%, 90% 74%, 46% 100%, 0 72%);
+      transform: rotate(8deg);
+    }
+
+    body::after {
+      width: 720px;
+      height: 420px;
+      left: -230px;
+      bottom: 110px;
+      background:
+        linear-gradient(140deg, #0072bc 0 21%, transparent 21%),
+        linear-gradient(50deg, #ffd21f 0 42%, transparent 42%),
+        linear-gradient(115deg, #ef1c25 0 63%, transparent 63%),
+        linear-gradient(215deg, #009b77 0 80%, transparent 80%),
+        #f37021;
+      clip-path: polygon(0 12%, 82% 0, 100% 58%, 68% 100%, 0 80%);
+      transform: rotate(-8deg);
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+    }
+
+    .page::before,
+    .page::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      pointer-events: none;
+      opacity: .22;
+    }
+
+    .page::before {
+      width: 460px;
+      height: 240px;
+      left: -110px;
+      top: 540px;
+      background:
+        linear-gradient(135deg, #ef1c25 0 20%, transparent 20%),
+        linear-gradient(45deg, #ffd21f 0 40%, transparent 40%),
+        linear-gradient(120deg, #0072bc 0 60%, transparent 60%),
+        linear-gradient(220deg, #009b77 0 78%, transparent 78%),
+        #f37021;
+      clip-path: polygon(0 10%, 100% 0, 86% 80%, 18% 100%);
+    }
+
+    .page::after {
+      width: 420px;
+      height: 220px;
+      right: -80px;
+      top: 1030px;
+      background:
+        linear-gradient(145deg, #0072bc 0 24%, transparent 24%),
+        linear-gradient(30deg, #ffd21f 0 42%, transparent 42%),
+        linear-gradient(120deg, #ef1c25 0 60%, transparent 60%),
+        linear-gradient(240deg, #009b77 0 80%, transparent 80%),
+        #f37021;
+      clip-path: polygon(6% 0, 100% 18%, 100% 100%, 0 82%, 0 30%);
+    }
+
+    .hero { margin-bottom: 18px; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 900px;
+      font-size: clamp(2rem, 5vw, 4.25rem);
+      line-height: .98;
+      letter-spacing: -0.055em;
+    }
+
+    .intro {
+      max-width: 850px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 1.03rem;
+      line-height: 1.55;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .panel, .map-card, .submission-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .map-card {
+      min-height: 760px;
+      position: relative;
+      order: 1;
+    }
+
+    #map {
+      width: 100%;
+      min-height: 760px;
+      height: 100%;
+      border-radius: 24px;
+      z-index: 1;
+    }
+
+    .panel {
+      padding: 18px;
+      min-height: auto;
+      max-height: none;
+      overflow: visible;
+      order: 2;
+    }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .controls-block {
+      position: sticky;
+      top: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px;
+      background: #ffffff;
+    }
+
+    .stat strong { display: block; font-size: 1.35rem; line-height: 1; }
+    .stat span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: .72rem;
+      line-height: 1.15;
+      text-transform: uppercase;
+      letter-spacing: .045em;
+    }
+
+    .control-label {
+      display: block;
+      margin: 16px 0 7px;
+      font-size: .78rem;
+      font-weight: 800;
+      color: #3a3f45;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    input, select, textarea, button { font: inherit; }
+
+    #search {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 13px;
+      outline: none;
+      background: #ffffff;
+    }
+
+    #search:focus,
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 94, 34, .14);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .filter {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #ffffff;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: .82rem;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .filter.active {
+      background: #20242a;
+      color: #fff;
+      border-color: #20242a;
+    }
+
+    .note {
+      margin: 16px 0;
+      padding: 12px;
+      border-radius: 16px;
+      background: #ffffff;
+      color: #34495a;
+      line-height: 1.42;
+      font-size: .88rem;
+    }
+
+    .result-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin: 14px 0 8px;
+      color: var(--muted);
+      font-size: .84rem;
+    }
+
+    .reset {
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 800;
+      padding: 0;
+      font-size: .82rem;
+    }
+
+    .list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+      gap: 10px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 10px 1fr;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+
+    .item:hover {
+      border-color: rgba(0, 114, 188, .45);
+      background: #ffffff;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 5px;
+    }
+
+    .item-title {
+      margin: 0 0 4px;
+      font-size: .94rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .item-meta {
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.3;
+    }
+
+    .legend {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      z-index: 500;
+      background: rgba(255,255,255,.94);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      max-width: 240px;
+      font-size: .8rem;
+    }
+
+    .legend strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      color: #3a3f45;
+    }
+
+    .popup { min-width: 230px; }
+    .popup h2 { margin: 0 0 5px; font-size: 1.05rem; line-height: 1.15; }
+    .popup .meta { margin-bottom: 9px; color: var(--muted); font-size: .78rem; }
+
+    .tag {
+      display: inline-block;
+      margin-bottom: 8px;
+      border-radius: 999px;
+      background: #f3eadb;
+      color: #55412a;
+      padding: 4px 8px;
+      font-size: .72rem;
+      font-weight: 800;
+    }
+
+    .popup p { margin: 7px 0; line-height: 1.4; }
+
+    .fact {
+      border-left: 4px solid var(--gold);
+      background: #faf4e9;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: .86rem;
+    }
+
+    .submit-link {
+      margin-top: 10px;
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      background: #20242a;
+      color: white;
+      padding: 9px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .submit-link:hover { background: #343a42; }
+
+    .number-marker {
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+      border: 2px solid #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    }
+
+
+
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 18%, rgba(239, 28, 37, 0.12), transparent 18%),
+        radial-gradient(circle at 88% 14%, rgba(0, 114, 188, 0.14), transparent 20%),
+        radial-gradient(circle at 78% 76%, rgba(0, 155, 119, 0.12), transparent 18%),
+        radial-gradient(circle at 20% 82%, rgba(243, 112, 33, 0.12), transparent 20%),
+        radial-gradient(circle at 52% 92%, rgba(255, 210, 31, 0.12), transparent 18%),
+        linear-gradient(180deg, #f8fbff 0%, #eef8ff 100%);
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -2;
+      pointer-events: none;
+      opacity: .24;
+      filter: saturate(105%);
+    }
+
+    body::before {
+      width: 760px;
+      height: 420px;
+      top: 120px;
+      right: -210px;
+      background:
+        linear-gradient(135deg, #ef1c25 0 22%, transparent 22%),
+        linear-gradient(35deg, #ffd21f 0 43%, transparent 43%),
+        linear-gradient(120deg, #0072bc 0 61%, transparent 61%),
+        linear-gradient(230deg, #009b77 0 80%, transparent 80%),
+        #f37021;
+      clip-path: polygon(0 0, 100% 6%, 90% 74%, 46% 100%, 0 72%);
+      transform: rotate(8deg);
+    }
+
+    body::after {
+      width: 720px;
+      height: 420px;
+      left: -230px;
+      bottom: 110px;
+      background:
+        linear-gradient(140deg, #0072bc 0 21%, transparent 21%),
+        linear-gradient(50deg, #ffd21f 0 42%, transparent 42%),
+        linear-gradient(115deg, #ef1c25 0 63%, transparent 63%),
+        linear-gradient(215deg, #009b77 0 80%, transparent 80%),
+        #f37021;
+      clip-path: polygon(0 12%, 82% 0, 100% 58%, 68% 100%, 0 80%);
+      transform: rotate(-8deg);
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+    }
+
+    .page::before,
+    .page::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      pointer-events: none;
+      opacity: .22;
+    }
+
+    .page::before {
+      width: 460px;
+      height: 240px;
+      left: -110px;
+      top: 540px;
+      background:
+        linear-gradient(135deg, #ef1c25 0 20%, transparent 20%),
+        linear-gradient(45deg, #ffd21f 0 40%, transparent 40%),
+        linear-gradient(120deg, #0072bc 0 60%, transparent 60%),
+        linear-gradient(220deg, #009b77 0 78%, transparent 78%),
+        #f37021;
+      clip-path: polygon(0 10%, 100% 0, 86% 80%, 18% 100%);
+    }
+
+    .page::after {
+      width: 420px;
+      height: 220px;
+      right: -80px;
+      top: 1030px;
+      background:
+        linear-gradient(145deg, #0072bc 0 24%, transparent 24%),
+        linear-gradient(30deg, #ffd21f 0 42%, transparent 42%),
+        linear-gradient(120deg, #ef1c25 0 60%, transparent 60%),
+        linear-gradient(240deg, #009b77 0 80%, transparent 80%),
+        #f37021;
+      clip-path: polygon(6% 0, 100% 18%, 100% 100%, 0 82%, 0 30%);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: clamp(22px, 4vw, 42px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 160px;
+      background:
+        linear-gradient(135deg, #ef1c25 0 18%, transparent 18%),
+        linear-gradient(45deg, #ffd21f 0 32%, transparent 32%),
+        linear-gradient(120deg, #0072bc 0 48%, transparent 48%),
+        linear-gradient(210deg, #009b77 0 64%, transparent 64%),
+        linear-gradient(300deg, #f37021 0 80%, transparent 80%);
+      opacity: .96;
+      clip-path: polygon(0 0, 100% 0, 75% 70%, 20% 100%);
+      pointer-events: none;
+    }
+
+    .hero::before { top: -34px; left: -28px; transform: rotate(-8deg); }
+    .hero::after { right: -36px; top: -28px; transform: rotate(18deg) scaleX(-1); }
+
+    .hero-content { position: relative; z-index: 2; max-width: 960px; }
+
+    .brand-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+    .brand-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 11px 15px;
+      font-weight: 900;
+      text-decoration: none;
+      border: 2px solid #20242a;
+      background: #20242a;
+      color: #fff;
+    }
+
+    .brand-button.secondary {
+      background: #ffd21f;
+      color: #111;
+      border-color: #111;
+    }
+
+    .section-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      margin-bottom: 12px;
+    }
+
+    .section-title-row h2 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      letter-spacing: -.04em;
+      line-height: 1.05;
+    }
+
+    .muted-small {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.4;
+      max-width: 680px;
+    }
+
+
+    .community-gallery-section {
+      margin-top: 18px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+      overflow: hidden;
+    }
+
+    .gallery-scroller {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 4px 2px 12px;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .gallery-scroller::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    .gallery-scroller::-webkit-scrollbar-track {
+      background: #eef4f8;
+      border-radius: 999px;
+    }
+
+    .gallery-scroller::-webkit-scrollbar-thumb {
+      background: #8fc4df;
+      border-radius: 999px;
+    }
+
+    .gallery-card {
+      flex: 0 0 280px;
+      scroll-snap-align: start;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(0,0,0,.07);
+    }
+
+    .gallery-card img {
+      width: 100%;
+      height: 190px;
+      object-fit: cover;
+      display: block;
+      background: #eef4f8;
+    }
+
+    .gallery-card-body {
+      padding: 12px;
+    }
+
+    .gallery-card-body h3 {
+      margin: 0 0 6px;
+      font-size: .98rem;
+      line-height: 1.2;
+    }
+
+    .gallery-meta {
+      color: var(--muted);
+      font-size: .82rem;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .gallery-caption {
+      color: #2d3540;
+      font-size: .88rem;
+      line-height: 1.38;
+      margin: 0;
+    }
+
+    .gallery-empty {
+      border: 1px dashed var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      background: #f8fbfd;
+      color: var(--muted);
+      line-height: 1.45;
+      min-width: 280px;
+    }
+
+    .community-photo-strip { display: grid; gap: 8px; margin-top: 10px; }
+
+    .community-photo-card {
+      border: 1px solid #e4d9c8;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .community-photo-card img {
+      width: 100%;
+      max-height: 150px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .community-photo-caption {
+      padding: 8px 9px;
+      font-size: .8rem;
+      line-height: 1.35;
+      color: #3a3f45;
+    }
+
+    .community-photo-caption strong { display: block; color: #20242a; margin-bottom: 2px; }
+
+    .photo-count-pill {
+      display: inline-block;
+      margin: 7px 0 4px;
+      border-radius: 999px;
+      background: #eaf7fd;
+      color: #24536c;
+      padding: 4px 8px;
+      font-size: .72rem;
+      font-weight: 900;
+    }
+
+    .submission-options {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .submission-option {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #ffffff;
+      padding: 16px;
+    }
+
+    .submission-option h3 { margin: 0 0 8px; font-size: 1.08rem; }
+    .submission-option p { margin: 0 0 12px; color: var(--muted); line-height: 1.42; font-size: .9rem; }
+
+    .prototype-form { margin-top: 14px; display: grid; gap: 10px; }
+
+    .prototype-form input,
+    .prototype-form textarea,
+    .prototype-form select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 10px 11px;
+      font: inherit;
+      background: #ffffff;
+    }
+
+    .prototype-form textarea { min-height: 76px; resize: vertical; }
+
+    .prototype-note {
+      margin-top: 10px;
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fff7d1;
+      color: #594713;
+      font-size: .82rem;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 780px) {
+      .submission-options { grid-template-columns: 1fr; }
+      .hero::before, .hero::after { opacity: .35; }
+      .section-title-row { display: block; }
+    }
+
+    .leaflet-container {
+      background: #d9edf7;
+    }
+
+    .basemap-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.35;
+    }
+
+    .leaflet-popup-content-wrapper { border-radius: 16px; }
+    .leaflet-popup-content { margin: 14px; }
+
+    .submission-section {
+      margin-top: 18px;
+      padding: 22px;
+      overflow: visible;
+    }
+
+    .submission-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .submission-section h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2.1rem);
+      letter-spacing: -.04em;
+      line-height: 1.05;
+    }
+
+    .submission-copy p {
+      color: var(--muted);
+      line-height: 1.48;
+      margin: 10px 0 0;
+    }
+
+    .submission-steps {
+      margin-top: 14px;
+      padding: 13px;
+      border-radius: 18px;
+      background: #ffffff;
+      color: #34495a;
+      font-size: .88rem;
+      line-height: 1.45;
+    }
+
+    .prototype-banner {
+      margin-top: 12px;
+      padding: 11px 12px;
+      border: 1px dashed #b5812a;
+      border-radius: 16px;
+      color: #58452c;
+      background: #ffffff;
+      font-size: .82rem;
+      line-height: 1.42;
+    }
+
+    .form-grid { display: grid; gap: 12px; }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: .78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #3a3f45;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 11px 12px;
+      font: inherit;
+      background: #ffffff;
+      outline: none;
+    }
+
+    .field textarea {
+      min-height: 82px;
+      resize: vertical;
+    }
+
+    .small-help {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.35;
+    }
+
+    .checkbox-row {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 9px;
+      align-items: start;
+      color: #3a3f45;
+      font-size: .88rem;
+      line-height: 1.35;
+    }
+
+    .checkbox-row input { margin-top: 2px; }
+
+    .submit-photo {
+      border: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 16px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .form-attention {
+      animation: formPulse 1.8s ease;
+    }
+
+    @keyframes formPulse {
+      0% { box-shadow: 0 0 0 0 rgba(181,129,42,.45), var(--shadow); border-color: #b5812a; }
+      55% { box-shadow: 0 0 0 12px rgba(181,129,42,.08), var(--shadow); border-color: #b5812a; }
+      100% { box-shadow: var(--shadow); border-color: var(--border); }
+    }
+
+    @media (max-width: 980px) {
+      .page { padding: 14px; }
+      .layout { grid-template-columns: 1fr; }
+      .panel { min-height: auto; max-height: none; }
+      .map-card, #map { min-height: 620px; }
+      .legend { display: none; }
+      .submission-grid { grid-template-columns: 1fr; }
+      .panel-grid { grid-template-columns: 1fr; }
+      .controls-block { position: static; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-content">
+        <p class="eyebrow">Mandela Day interactive map</p>
+        <h1>Nelson Mandela’s life, memory, and global legacy</h1>
+        <p class="intro">
+          Explore Mandela landmarks around the world, share photos from places connected to his legacy,
+          and help identify additional monuments, artworks, and memory sites for review.
+        </p>
+        <div class="brand-actions">
+          <a class="brand-button" href="#map">Explore the map</a>
+          <a class="brand-button secondary" href="#submit-photo">Share a photo</a>
+          <a class="brand-button tertiary" href="https://tally.so/r/9qo0JK" target="_blank" rel="noopener">Suggest a missing landmark</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="layout" aria-label="Nelson Mandela global memory map">
+
+
+      <div class="map-card">
+        <div id="map"></div>
+        <div class="legend">
+          <strong>Map key</strong>
+          <div class="basemap-note">Standard world-map projection — no internal borders or labels.</div>
+          <div class="legend-row"><span class="swatch" style="background:#2f6b4f"></span>Life journey</div>
+          <div class="legend-row"><span class="swatch" style="background:#9f3d32"></span>Prison / struggle</div>
+          <div class="legend-row"><span class="swatch" style="background:#b5812a"></span>Statues / public art</div>
+          <div class="legend-row"><span class="swatch" style="background:#35617c"></span>Global tributes</div>
+          <div class="legend-row"><span class="swatch" style="background:#6f5b82"></span>Memorial context</div>
+        </div>
+      </div>
+    
+
+      <aside class="panel">
+        <div class="panel-grid">
+          <div class="controls-block">
+
+        <div class="stats">
+          <div class="stat"><strong id="totalSites">0</strong><span>sites</span></div>
+          <div class="stat"><strong id="totalCountries">0</strong><span>countries</span></div>
+          <div class="stat"><strong id="totalSA">0</strong><span>South Africa</span></div>
+        </div>
+
+        <label class="control-label" for="search">Search</label>
+        <input id="search" type="search" placeholder="Search by city, country, theme, or site">
+
+        <label class="control-label">Theme</label>
+        <div class="filters" id="filters"></div>
+
+        <div class="note">
+          <strong>Best storytelling use:</strong> start with Mandela’s South African life journey, then show how
+          his memory travelled globally through statues, murals, diplomacy, and solidarity.
+        </div>
+
+        
+          </div>
+          <div class="landmarks-block">
+<div class="result-line">
+          <span><strong id="visibleCount">0</strong> landmarks shown</span>
+          <button class="reset" id="resetBtn" type="button">Reset map</button>
+        </div>
+
+        <div class="list" id="landmarkList"></div>
+      
+          </div>
+        </div>
+      </aside>
+
+    </section>
+
+    <section class="submission-section"  id="submit-photo">
+      <div class="submission-grid">
+        <div class="submission-copy">
+          <p class="eyebrow">Community submissions</p>
+          <h2>Share a photo from a Mandela landmark</h2>
+          <p>
+            Visitors can contribute photos from mapped Mandela landmarks around the world.
+            Each submission is reviewed before anything appears publicly on the map.
+          </p>
+          <div class="submission-steps">
+            <strong>How it works:</strong><br>
+            Choose a landmark → submit your photo → review by the team → approved photos may be added to the public map.
+          </div>
+        </div>
+
+        <div class="prototype-banner" style="margin-top:0;">
+          <strong>Approval-first workflow:</strong><br>
+          Photo submissions are handled through a Tally form and should be reviewed through
+          <strong>eduoutreach.humanrights@gmail.com</strong> before publication.
+          <br><br>
+          To submit from a specific place, click a landmark on the map and choose
+          <strong>“Submit a photo from this landmark.”</strong>
+          <br><br>
+          <a href="https://tally.so/r/ZjZod0" target="_blank" rel="noopener" style="display:inline-block; margin-top:4px; background:#8b5e22; color:#fff; padding:11px 14px; border-radius:999px; font-weight:900; text-decoration:none;">Open general submission form</a>
+        </div>
+      </div>
+    </section>
+
+</div>
+
+  <script>
+    const landmarks = [
+      {
+            "name": "Robben Island",
+            "city": "Cape Town",
+            "country": "South Africa",
+            "lat": -33.8067,
+            "lng": 18.3662,
+            "category": "Prison / struggle site",
+            "period": "1964–1982",
+            "headline": "Mandela spent 18 of his 27 prison years here.",
+            "description": "A UNESCO World Heritage Site and one of the most internationally recognized symbols of apartheid repression and democratic triumph. Mandela’s small cell and the limestone quarry remain central stops on visitor tours.",
+            "fact": "Robben Island had earlier been used as a prison, hospital for socially excluded groups, and military base.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "prison",
+                  "unesco"
+            ]
+      },
+      {
+            "name": "Nelson Mandela Capture Site",
+            "city": "Howick, KwaZulu-Natal",
+            "country": "South Africa",
+            "lat": -29.4667,
+            "lng": 30.1739,
+            "category": "Public artwork",
+            "period": "1962 / memorial unveiled 2012",
+            "headline": "The site of Mandela’s arrest on 5 August 1962.",
+            "description": "Marco Cianfanelli’s sculpture uses 50 vertical steel columns that align into Mandela’s face from a specific viewing point, marking the 50th anniversary of his arrest.",
+            "fact": "The portrait disappears as you move through it, turning Mandela’s image back into a forest of individual steel poles.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "artwork",
+                  "arrest"
+            ]
+      },
+      {
+            "name": "Mandela House Museum",
+            "city": "Vilakazi Street, Soweto",
+            "country": "South Africa",
+            "lat": -26.2386,
+            "lng": 27.908,
+            "category": "Home / museum",
+            "period": "1946–1962",
+            "headline": "Mandela’s former family home at 8115 Vilakazi Street.",
+            "description": "The house preserves the domestic world Mandela shared with his family before imprisonment and has become one of Soweto’s best-known heritage stops.",
+            "fact": "Vilakazi Street is often described as the only street associated with two Nobel Peace Prize laureates: Nelson Mandela and Archbishop Desmond Tutu.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "museum",
+                  "home"
+            ]
+      },
+      {
+            "name": "Liliesleaf Farm",
+            "city": "Rivonia, Johannesburg",
+            "country": "South Africa",
+            "lat": -26.0396,
+            "lng": 28.0544,
+            "category": "Underground / trial site",
+            "period": "Early 1960s",
+            "headline": "A secret anti-apartheid meeting place tied to the Rivonia Trial.",
+            "description": "Liliesleaf was used as a clandestine base by ANC and allied activists. Police raided it in 1963, leading to arrests and evidence central to the Rivonia Trial.",
+            "fact": "Mandela had used the alias David Motsamayi while operating underground.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "underground",
+                  "trial"
+            ]
+      },
+      {
+            "name": "Constitution Hill",
+            "city": "Johannesburg",
+            "country": "South Africa",
+            "lat": -26.1886,
+            "lng": 28.0424,
+            "category": "Prison / constitutional site",
+            "period": "Apartheid era / democratic era",
+            "headline": "A former prison complex now home to South Africa’s Constitutional Court.",
+            "description": "Mandela was among the many political prisoners held in the complex. Today the site links past repression to the constitutional democracy Mandela helped build.",
+            "fact": "Its transformation from prison to Constitutional Court is one of the strongest spatial metaphors of post-apartheid South Africa.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "prison",
+                  "constitution"
+            ]
+      },
+      {
+            "name": "Apartheid Museum",
+            "city": "Johannesburg",
+            "country": "South Africa",
+            "lat": -26.2371,
+            "lng": 28.0086,
+            "category": "Museum",
+            "period": "Opened 2001",
+            "headline": "A major museum interpreting apartheid and the freedom struggle.",
+            "description": "The museum contextualizes Mandela’s political life within the broader system of apartheid, resistance, state violence, and democratic transition.",
+            "fact": "The entrance experience famously separates visitors through race-labeled tickets to confront apartheid classification systems.",
+            "tags": [
+                  "south-africa",
+                  "museum",
+                  "context"
+            ]
+      },
+      {
+            "name": "Chancellor House",
+            "city": "Johannesburg",
+            "country": "South Africa",
+            "lat": -26.204,
+            "lng": 28.0429,
+            "category": "Law / political life",
+            "period": "1950s",
+            "headline": "The former law office of Mandela and Oliver Tambo.",
+            "description": "Mandela and Tambo ran one of South Africa’s first Black legal practices here, serving clients harmed by apartheid law.",
+            "fact": "Nearby public art, including the Shadow Boxer, evokes Mandela’s youth, discipline, and physical presence.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "law",
+                  "johannesburg"
+            ]
+      },
+      {
+            "name": "The Shadow Boxer",
+            "city": "Newtown, Johannesburg",
+            "country": "South Africa",
+            "lat": -26.2028,
+            "lng": 28.0349,
+            "category": "Public artwork",
+            "period": "2013",
+            "headline": "A steel sculpture of Mandela as a young boxer.",
+            "description": "Marco Cianfanelli’s five-metre artwork references Bob Gosani’s famous photograph of Mandela boxing and connects his political discipline to physical training.",
+            "fact": "The sculpture sits near Chancellor House, tying public art to Mandela’s legal career.",
+            "tags": [
+                  "south-africa",
+                  "artwork",
+                  "lesser-known"
+            ]
+      },
+      {
+            "name": "Nelson Mandela Square Statue",
+            "city": "Sandton, Johannesburg",
+            "country": "South Africa",
+            "lat": -26.1075,
+            "lng": 28.0567,
+            "category": "Statue",
+            "period": "Unveiled 2004",
+            "headline": "A six-metre bronze statue in one of Johannesburg’s busiest public squares.",
+            "description": "Sculpted by Kobus Hattingh and Jacob Maponyane, the statue anchors Nelson Mandela Square and is one of the most photographed Mandela monuments.",
+            "fact": "The square was renamed from Sandton Square when the statue was unveiled.",
+            "tags": [
+                  "south-africa",
+                  "statue",
+                  "johannesburg"
+            ]
+      },
+      {
+            "name": "Union Buildings Mandela Statue",
+            "city": "Pretoria",
+            "country": "South Africa",
+            "lat": -25.7406,
+            "lng": 28.212,
+            "category": "Statue / presidency",
+            "period": "Unveiled 2013",
+            "headline": "A nine-metre statue at South Africa’s seat of government.",
+            "description": "The statue stands at the Union Buildings, where Mandela was inaugurated as South Africa’s first democratically elected president in 1994.",
+            "fact": "Its open-armed pose is often read as a gesture of reconciliation and national welcome.",
+            "tags": [
+                  "south-africa",
+                  "statue",
+                  "presidency"
+            ]
+      },
+      {
+            "name": "Freedom Park",
+            "city": "Pretoria",
+            "country": "South Africa",
+            "lat": -25.7672,
+            "lng": 28.188,
+            "category": "Memorial landscape",
+            "period": "Post-apartheid",
+            "headline": "A national memorial landscape for freedom, struggle, and reconciliation.",
+            "description": "Freedom Park honors people who died in South Africa’s struggles for freedom and offers a broader memorial context for Mandela’s life and politics.",
+            "fact": "It looks across Pretoria toward the Voortrekker Monument, creating a symbolic dialogue about competing national memories.",
+            "tags": [
+                  "south-africa",
+                  "memorial",
+                  "context"
+            ]
+      },
+      {
+            "name": "Mvezo Birthplace",
+            "city": "Mvezo, Eastern Cape",
+            "country": "South Africa",
+            "lat": -31.958,
+            "lng": 28.517,
+            "category": "Birthplace / heritage",
+            "period": "1918",
+            "headline": "The village where Nelson Rolihlahla Mandela was born.",
+            "description": "Mvezo forms part of the broader Nelson Mandela Museum heritage landscape, linking Mandela’s global legacy to Thembu royal and rural Eastern Cape roots.",
+            "fact": "Mandela’s given Xhosa name, Rolihlahla, is often translated colloquially as ‘pulling the branch of a tree’ or ‘troublemaker.’",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "birthplace",
+                  "eastern-cape"
+            ]
+      },
+      {
+            "name": "Qunu",
+            "city": "Qunu, Eastern Cape",
+            "country": "South Africa",
+            "lat": -31.8004,
+            "lng": 28.6127,
+            "category": "Childhood / burial place",
+            "period": "Childhood / burial 2013",
+            "headline": "Mandela’s childhood village and burial place.",
+            "description": "Mandela repeatedly described Qunu as central to his sense of identity. The village is part of the Mandela heritage route and museum landscape.",
+            "fact": "Mandela wrote warmly about sliding down the smooth rocks near Qunu as a child.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "childhood",
+                  "eastern-cape"
+            ]
+      },
+      {
+            "name": "Nelson Mandela Museum, Bhunga Building",
+            "city": "Mthatha",
+            "country": "South Africa",
+            "lat": -31.5892,
+            "lng": 28.7848,
+            "category": "Museum",
+            "period": "Opened 2000",
+            "headline": "A major institutional archive and museum of Mandela’s life.",
+            "description": "The museum presents Mandela’s life, struggle, presidency, and global legacy, connected with Qunu and Mvezo heritage sites.",
+            "fact": "The museum opened ten years after Mandela’s release from prison.",
+            "tags": [
+                  "south-africa",
+                  "museum",
+                  "eastern-cape"
+            ]
+      },
+      {
+            "name": "Drakenstein Correctional Centre / Victor Verster Prison",
+            "city": "Paarl area, Western Cape",
+            "country": "South Africa",
+            "lat": -33.845,
+            "lng": 18.971,
+            "category": "Prison / release site",
+            "period": "1988–1990",
+            "headline": "The prison from which Mandela walked free on 11 February 1990.",
+            "description": "Formerly Victor Verster Prison, the site is marked by a statue recalling Mandela’s walk to freedom after 27 years of imprisonment.",
+            "fact": "Images of Mandela and Winnie Madikizela-Mandela leaving the prison became defining global images of the end of apartheid.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "prison",
+                  "release"
+            ]
+      },
+      {
+            "name": "Pollsmoor Prison",
+            "city": "Cape Town",
+            "country": "South Africa",
+            "lat": -34.0718,
+            "lng": 18.4386,
+            "category": "Prison",
+            "period": "1982–1988",
+            "headline": "Mandela was transferred here after Robben Island.",
+            "description": "Pollsmoor marked a later phase of Mandela’s imprisonment, when discreet negotiations and political shifts began to gather force.",
+            "fact": "Mandela’s move from Robben Island to Pollsmoor separated him from many Robben Island comrades.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "prison"
+            ]
+      },
+      {
+            "name": "Cape Town City Hall and Grand Parade",
+            "city": "Cape Town",
+            "country": "South Africa",
+            "lat": -33.9252,
+            "lng": 18.4239,
+            "category": "Speech / public memory",
+            "period": "11 February 1990",
+            "headline": "Where Mandela addressed a mass crowd after his release.",
+            "description": "After walking free from Victor Verster Prison, Mandela appeared at Cape Town City Hall and delivered a historic public address to the crowd on the Grand Parade.",
+            "fact": "A balcony statue now commemorates the moment he addressed the public as a free man.",
+            "tags": [
+                  "life",
+                  "south-africa",
+                  "speech",
+                  "release"
+            ]
+      },
+      {
+            "name": "Parliament Square Mandela Statue",
+            "city": "London",
+            "country": "United Kingdom",
+            "lat": 51.5007,
+            "lng": -0.1266,
+            "category": "Statue",
+            "period": "Unveiled 2007",
+            "headline": "A bronze Mandela statue among global political figures in Parliament Square.",
+            "description": "Sculpted by Ian Walters, the statue places Mandela in conversation with figures such as Churchill, Lincoln, and Gandhi in one of London’s most symbolic civic spaces.",
+            "fact": "Mandela attended the unveiling himself in August 2007.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "uk"
+            ]
+      },
+      {
+            "name": "United Nations Mandela Statue",
+            "city": "New York",
+            "country": "United States",
+            "lat": 40.7494,
+            "lng": -73.968,
+            "category": "Statue / diplomacy",
+            "period": "2018",
+            "headline": "A life-size bronze statue gifted by South Africa to the United Nations.",
+            "description": "The statue sits at UN Headquarters, linking Mandela’s legacy to diplomacy, peace, human rights, and the UN’s annual Nelson Mandela International Day.",
+            "fact": "The UN General Assembly observes 18 July as Nelson Mandela International Day.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "un",
+                  "diplomacy"
+            ]
+      },
+      {
+            "name": "South African Embassy Mandela Statue",
+            "city": "Washington, DC",
+            "country": "United States",
+            "lat": 38.9158,
+            "lng": -77.0469,
+            "category": "Statue / diplomacy",
+            "period": "Unveiled 2013",
+            "headline": "A Mandela statue outside South Africa’s diplomatic mission in Washington.",
+            "description": "The monument commemorates Mandela in the U.S. capital and reflects South Africa’s post-apartheid diplomatic identity.",
+            "fact": "The Nelson Mandela Foundation archive records the Washington statue as unveiled on 21 September 2013.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "usa",
+                  "diplomacy"
+            ]
+      },
+      {
+            "name": "Mandela Square Statue",
+            "city": "Ramallah",
+            "country": "Palestine",
+            "lat": 31.904,
+            "lng": 35.2047,
+            "category": "Statue / solidarity",
+            "period": "Unveiled 2016",
+            "headline": "A six-metre Mandela statue gifted by Johannesburg to Ramallah.",
+            "description": "The statue symbolizes South African-Palestinian solidarity and the global language of anti-apartheid struggle.",
+            "fact": "Ramallah and Johannesburg are twinned cities; the statue is a replica connected to Johannesburg’s public memory.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "solidarity"
+            ]
+      },
+      {
+            "name": "Long Walk to Freedom Monument",
+            "city": "The Hague",
+            "country": "Netherlands",
+            "lat": 52.089,
+            "lng": 4.2848,
+            "category": "Statue",
+            "period": "Unveiled 2012",
+            "headline": "A 3.5-metre Mandela statue in The Hague’s international zone.",
+            "description": "Created by Arie Schippers, the monument places Mandela at ground level rather than on a high pedestal, with children’s footprints in the pavement pointing toward the future.",
+            "fact": "Archbishop Desmond Tutu helped unveil the monument in 2012.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "netherlands"
+            ]
+      },
+      {
+            "name": "Merrion Square Tribute Head",
+            "city": "Dublin",
+            "country": "Ireland",
+            "lat": 53.339,
+            "lng": -6.2508,
+            "category": "Public artwork / solidarity",
+            "period": "Unveiled 1983",
+            "headline": "An early European public artwork dedicated to Mandela while he was still imprisoned.",
+            "description": "Elisabeth Frink’s sculptural tribute in Merrion Square became part of Irish anti-apartheid solidarity memory.",
+            "fact": "The tribute was unveiled in 1983, years before Mandela’s release.",
+            "tags": [
+                  "global",
+                  "artwork",
+                  "ireland",
+                  "solidarity",
+                  "lesser-known"
+            ]
+      },
+      {
+            "name": "African Founding Fathers Park Mandela Statue",
+            "city": "Havana",
+            "country": "Cuba",
+            "lat": 23.1136,
+            "lng": -82.3666,
+            "category": "Statue / solidarity",
+            "period": "Unveiled 2019",
+            "headline": "A Havana statue commemorating historic South Africa-Cuba ties.",
+            "description": "The memorial connects Mandela’s legacy with Cuba’s role in Southern African liberation struggles and post-apartheid diplomatic friendship.",
+            "fact": "Mandela publicly praised Cuba’s support for African liberation movements.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "cuba",
+                  "solidarity"
+            ]
+      },
+      {
+            "name": "Hackney Peace Carnival Mural",
+            "city": "London",
+            "country": "United Kingdom",
+            "lat": 51.5465,
+            "lng": -0.0732,
+            "category": "Mural / community art",
+            "period": "1985",
+            "headline": "A major London mural depicting Mandela, Gandhi, and local peace activism.",
+            "description": "The mural reflects 1980s anti-apartheid and peace politics in London, connecting Mandela to community-level activism and public art.",
+            "fact": "It was tied to the Greater London Council’s Peace Year and later restored.",
+            "tags": [
+                  "global",
+                  "mural",
+                  "uk",
+                  "solidarity",
+                  "lesser-known"
+            ]
+      },
+      {
+            "name": "Nelson Mandela Place",
+            "city": "Glasgow",
+            "country": "United Kingdom",
+            "lat": 55.8623,
+            "lng": -4.2549,
+            "category": "Named place / solidarity",
+            "period": "Named 1986",
+            "headline": "A street renamed for Mandela while he was still imprisoned.",
+            "description": "Glasgow renamed the street of the South African Consulate as Nelson Mandela Place, making anti-apartheid solidarity visible in the city’s geography.",
+            "fact": "Glasgow granted Mandela Freedom of the City in 1981 while he was still in prison.",
+            "tags": [
+                  "global",
+                  "named-place",
+                  "uk",
+                  "solidarity",
+                  "lesser-known"
+            ]
+      },
+      {
+            "name": "Mandela Statue, Montpellier",
+            "city": "Montpellier",
+            "country": "France",
+            "lat": 43.6108,
+            "lng": 3.8767,
+            "category": "Statue",
+            "period": "Unveiled 2012",
+            "headline": "A public Mandela statue in southern France.",
+            "description": "Listed in the Nelson Mandela Foundation tribute archive, the Montpellier statue shows how Mandela’s memory has been localized far beyond South Africa.",
+            "fact": "The statue is associated with Place du XXe siècle, a square whose name itself points to twentieth-century political memory.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "france",
+                  "lesser-known"
+            ]
+      },
+      {
+            "name": "Mandela Statue, Lima",
+            "city": "Lima",
+            "country": "Peru",
+            "lat": -12.089,
+            "lng": -77.052,
+            "category": "Statue",
+            "period": "2010",
+            "headline": "A Mandela statue in Lima’s Plaza Andrés Avelino Cáceres.",
+            "description": "The Nelson Mandela Foundation tribute archive records a statue by Humberto Hoyos Guevara in Lima, reflecting Mandela’s reach into Latin American civic memory.",
+            "fact": "This is one of the lesser-known Mandela commemorations outside Africa, Europe, and North America.",
+            "tags": [
+                  "global",
+                  "statue",
+                  "peru",
+                  "lesser-known"
+            ]
+      },
+      {
+            "name": "Naval Hill Mandela Statue",
+            "city": "Bloemfontein",
+            "country": "South Africa",
+            "lat": -29.097,
+            "lng": 26.23,
+            "category": "Statue",
+            "period": "2012",
+            "headline": "An eight-metre Mandela statue overlooking Bloemfontein.",
+            "description": "The statue on Naval Hill looks across the city and forms part of a broader memorial landscape in the Free State.",
+            "fact": "Its elevated setting makes it one of the most visually commanding Mandela statues in South Africa.",
+            "tags": [
+                  "south-africa",
+                  "statue",
+                  "lesser-known"
+            ]
+      }
+];
+
+
+    // Future live-data hooks:
+    // When Airtable is connected, approved records can populate these structures dynamically.
+    const approvedUserLandmarks = [
+      /*
+      {
+        name: "Example Mandela Mural",
+        city: "Example City",
+        country: "Example Country",
+        lat: 0,
+        lng: 0,
+        category: "User-submitted landmark",
+        period: "Submitted 2026",
+        headline: "Community-submitted Mandela landmark.",
+        description: "This description would come from an approved submission.",
+        fact: "Approved community submission.",
+        tags: ["global", "artwork", "user-submitted"]
+      }
+      */
+    ];
+
+    const APPROVED_PHOTOS_ENDPOINT = "https://madiba-map-approved-photos.eduoutreach-humanrights.workers.dev/";
+    let approvedCommunityPhotos = [];
+
+    const allLandmarks = landmarks.concat(approvedUserLandmarks);
+
+    function normalizeLandmarkName(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function getPhotosForLandmark(landmarkName) {
+      const target = normalizeLandmarkName(landmarkName);
+      return approvedCommunityPhotos.filter(photo => normalizeLandmarkName(photo.landmark) === target);
+    }
+
+    function renderCommunityGallery() {
+      const container = document.getElementById("communityGallery");
+      if (!container) return;
+
+      if (!approvedCommunityPhotos.length) {
+        container.innerHTML = `
+          <div class="gallery-empty">
+            Approved community photos will appear here once submissions are reviewed.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = approvedCommunityPhotos.map(photo => `
+        <article class="gallery-card">
+          <img src="${escapeHtml(photo.image)}" alt="Community photo from ${escapeHtml(photo.landmark || "a Mandela landmark")}">
+          <div class="gallery-card-body">
+            <h3>${escapeHtml(photo.landmark || "Mandela landmark")}</h3>
+            <div class="gallery-meta">
+              ${escapeHtml(photo.displayName || "Community contributor")}${photo.country ? " · " + escapeHtml(photo.country) : ""}
+            </div>
+            <p class="gallery-caption">${escapeHtml(photo.caption || "")}</p>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    async function loadApprovedPhotos() {
+      try {
+        const response = await fetch(APPROVED_PHOTOS_ENDPOINT, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Photo feed returned ${response.status}`);
+        const data = await response.json();
+        approvedCommunityPhotos = Array.isArray(data.photos) ? data.photos : [];
+        renderCommunityGallery();
+        renderMap();
+      } catch (error) {
+        console.warn("Could not load approved community photos", error);
+        renderCommunityGallery();
+      }
+    }
+
+    const filterOptions = [
+      { id: "all", label: "All" },
+      { id: "life", label: "Life journey" },
+      { id: "south-africa", label: "South Africa" },
+      { id: "global", label: "Global tributes" },
+      { id: "prison", label: "Prisons / struggle" },
+      { id: "statue", label: "Statues" },
+      { id: "artwork", label: "Artwork / murals" },
+      { id: "solidarity", label: "Solidarity" },
+      { id: "lesser-known", label: "Lesser-known" }
+    ];
+
+    let activeFilter = "all";
+    let markerLayer;
+    let allMarkers = [];
+
+    const map = L.map("map", {
+      zoomControl: true,
+      scrollWheelZoom: false,
+      worldCopyJump: true
+    });
+
+    const landPane = map.createPane("landPane");
+    landPane.style.zIndex = 180;
+    landPane.style.pointerEvents = "none";
+
+    function addSingleLandmassOverlay() {
+      const width = 3600;
+      const height = 3600;
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("aria-hidden", "true");
+
+      fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/land-50m.json")
+        .then(response => response.json())
+        .then(world => {
+          const land = topojson.feature(world, world.objects.land);
+
+          // Match Leaflet's ordinary web-map projection so the world does not look stretched.
+          // Web Mercator uses a square world and clips at approximately +/-85 degrees latitude.
+          const maxMercatorLat = 85.05112878;
+          const projection = d3.geoMercator()
+            .scale(width / (2 * Math.PI))
+            .translate([width / 2, width / 2])
+            .precision(0.1)
+            .clipExtent([[0, 0], [width, width]]);
+
+          svg.setAttribute("viewBox", `0 0 ${width} ${width}`);
+
+          const path = d3.geoPath(projection);
+          const d = path(land);
+
+          const landPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          landPath.setAttribute("d", d);
+          landPath.setAttribute("fill", "#f7f4ee");
+          landPath.setAttribute("stroke", "#8fc4df");
+          landPath.setAttribute("stroke-width", "2.2");
+          landPath.setAttribute("stroke-linejoin", "round");
+          landPath.setAttribute("stroke-linecap", "round");
+          svg.appendChild(landPath);
+
+          L.svgOverlay(svg, [[-maxMercatorLat, -180], [maxMercatorLat, 180]], {
+            pane: "landPane",
+            interactive: false
+          }).addTo(map);
+        })
+        .catch(error => {
+          console.error("Could not load borderless land layer", error);
+        });
+    }
+
+    addSingleLandmassOverlay();
+
+    markerLayer = L.layerGroup().addTo(map);
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function decodeHtml(value) {
+      const textArea = document.createElement("textarea");
+      textArea.innerHTML = value;
+      return textArea.value;
+    }
+
+    function markerColor(item) {
+      const category = item.category.toLowerCase();
+      if (item.tags.includes("life")) return "#2f6b4f";
+      if (item.tags.includes("prison") || category.includes("prison") || category.includes("trial") || category.includes("underground")) return "#9f3d32";
+      if (item.tags.includes("statue") || item.tags.includes("artwork") || category.includes("mural") || category.includes("art")) return "#b5812a";
+      if (item.tags.includes("global")) return "#35617c";
+      return "#6f5b82";
+    }
+
+    function markerHtml(number, color) {
+      return `<div class="number-marker" style="background:${color}">${number}</div>`;
+    }
+
+    function makeIcon(number, item) {
+      return L.divIcon({
+        className: "",
+        html: markerHtml(number, markerColor(item)),
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -12]
+      });
+    }
+
+    function popupContent(item) {
+      const photos = getPhotosForLandmark(item.name);
+      const photoHtml = photos.length
+        ? `<div class="community-photo-strip">
+            ${photos.slice(0, 3).map(photo => `
+              <div class="community-photo-card">
+                <img src="${escapeHtml(photo.image)}" alt="Community photo from ${escapeHtml(item.name)}">
+                <div class="community-photo-caption">
+                  <strong>${escapeHtml(photo.displayName || "Community contributor")} ${escapeHtml(photo.country || "")}</strong>
+                  ${escapeHtml(photo.caption || "")}
+                </div>
+              </div>
+            `).join("")}
+          </div>`
+        : `<p class="small-help">No approved community photos yet. Be the first to submit one for review.</p>`;
+
+      return `
+        <div class="popup">
+          <h2>${escapeHtml(item.name)}</h2>
+          <div class="meta">${escapeHtml(item.city)}, ${escapeHtml(item.country)} · ${escapeHtml(item.period)}</div>
+          <span class="tag">${escapeHtml(item.category)}</span>
+          <p><strong>${escapeHtml(item.headline)}</strong></p>
+          <p>${escapeHtml(item.description)}</p>
+          <p class="fact"><strong>Lesser-known note:</strong> ${escapeHtml(item.fact)}</p>
+          <span class="photo-count-pill">${photos.length} approved community photo${photos.length === 1 ? "" : "s"}</span>
+          ${photoHtml}
+          <button class="submit-link" type="button" data-landmark="${escapeHtml(item.name)}">Submit a photo from this landmark</button>
+        </div>
+      `;
+    }
+
+    function itemMatches(item, query) {
+      const filterMatch =
+        activeFilter === "all" ||
+        item.tags.includes(activeFilter) ||
+        item.category.toLowerCase().includes(activeFilter) ||
+        (activeFilter === "south-africa" && item.country === "South Africa");
+
+      if (!filterMatch) return false;
+
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+
+      const text = [
+        item.name,
+        item.city,
+        item.country,
+        item.category,
+        item.period,
+        item.headline,
+        item.description,
+        item.fact,
+        ...item.tags
+      ].join(" ").toLowerCase();
+
+      return text.includes(q);
+    }
+
+    function renderFilters() {
+      const container = document.getElementById("filters");
+      container.innerHTML = "";
+
+      filterOptions.forEach(option => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "filter" + (activeFilter === option.id ? " active" : "");
+        button.textContent = option.label;
+        button.addEventListener("click", () => {
+          activeFilter = option.id;
+          renderFilters();
+          renderMap();
+        });
+        container.appendChild(button);
+      });
+    }
+
+    function renderMap() {
+      const query = document.getElementById("search").value;
+      const visible = allLandmarks.filter(item => itemMatches(item, query));
+
+      markerLayer.clearLayers();
+      allMarkers = [];
+      const list = document.getElementById("landmarkList");
+      list.innerHTML = "";
+
+      visible.forEach((item, index) => {
+        const number = index + 1;
+        const marker = L.marker([item.lat, item.lng], { icon: makeIcon(number, item) })
+          .bindPopup(popupContent(item), { maxWidth: 340 })
+          .addTo(markerLayer);
+
+        allMarkers.push(marker);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "item";
+        button.innerHTML = `
+          <span class="swatch" style="background:${markerColor(item)}"></span>
+          <span>
+            <span class="item-title">${number}. ${escapeHtml(item.name)}</span>
+            <span class="item-meta">${escapeHtml(item.city)}, ${escapeHtml(item.country)} · ${escapeHtml(item.category)}</span>
+          </span>
+        `;
+        button.addEventListener("click", () => {
+          map.setView([item.lat, item.lng], item.country === "South Africa" ? 8 : 11);
+          marker.openPopup();
+        });
+
+        list.appendChild(button);
+      });
+
+      document.getElementById("visibleCount").textContent = visible.length;
+
+      if (visible.length > 0) {
+        const bounds = L.latLngBounds(visible.map(item => [item.lat, item.lng]));
+        map.fitBounds(bounds, { padding: [28, 28], maxZoom: visible.length === 1 ? 10 : 4 });
+      } else {
+        map.setView([0, 20], 2);
+      }
+    }
+
+    function resetMap() {
+      document.getElementById("search").value = "";
+      activeFilter = "all";
+      renderFilters();
+      renderMap();
+    }
+
+    function openSubmissionForm(rawLandmarkName) {
+      const landmarkName = decodeHtml(rawLandmarkName || "");
+      const tallyUrl = "https://tally.so/r/ZjZod0?landmark=" + encodeURIComponent(landmarkName);
+      window.open(tallyUrl, "_blank", "noopener,noreferrer");
+    }
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("[data-landmark]");
+      if (!button) return;
+      openSubmissionForm(button.getAttribute("data-landmark"));
+    });
+document.getElementById("totalSites").textContent = allLandmarks.length;
+    document.getElementById("totalCountries").textContent = new Set(allLandmarks.map(item => item.country)).size;
+    document.getElementById("totalSA").textContent = allLandmarks.filter(item => item.country === "South Africa").length;
+
+    renderFilters();
+    renderMap();
+    loadApprovedPhotos();
+  </script>
+</body>
+</html>
